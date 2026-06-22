@@ -14,6 +14,7 @@ import Home from './pages/Home';
 import About from './pages/About';
 import Services from './pages/Services';
 import Contact from './pages/Contact';
+import PayrollCalculator from './pages/PayrollCalculator';
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
             <Route path="leaves" element={<Leaves />} />
             <Route path="reports" element={<Reports />} />
             <Route path="profile" element={<Profile />} />
+            <Route path="calculator" element={<PayrollCalculator />} />
           </Route>
 
           {/* Redirect unknown routes to home */}
