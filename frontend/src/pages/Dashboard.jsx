@@ -1,3 +1,13 @@
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
+
 const summaryCards = [
   { label: 'Total Employees', value: 128, accent: 'bg-green-500' },
   { label: 'Payroll This Month', value: '$48,760', accent: 'bg-blue-500' },
@@ -18,11 +28,32 @@ const payrollStats = [
   { label: 'Benefits Paid', value: '$2,500' },
 ];
 
+const monthlyTrend = [
+  { month: 'Jan', payroll: 44200 },
+  { month: 'Feb', payroll: 45100 },
+  { month: 'Mar', payroll: 43800 },
+  { month: 'Apr', payroll: 46500 },
+  { month: 'May', payroll: 47200 },
+  { month: 'Jun', payroll: 48760 },
+];
+
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="rounded-xl bg-white px-4 py-2 shadow-lg border border-slate-100">
+        <p className="text-sm font-semibold text-slate-700">{label}</p>
+        <p className="text-sm text-blue-600">${payload[0].value.toLocaleString()}</p>
+      </div>
+    );
+  }
+  return null;
+};
+
 const Dashboard = () => {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-slate-800">Payroll Dashboard</h1>
+        <h1 className="text-3xl font-bold text-red-500">Payroll Dashboard</h1>
         <p className="mt-1 text-slate-500">
           Overview of employee payroll, approvals, and recent activity.
         </p>
@@ -52,29 +83,56 @@ const Dashboard = () => {
             ))}
           </div>
           <div className="mt-6">
-            <p className="text-sm text-slate-500">Monthly Payroll Trend</p>
-            <div className="mt-2 flex h-56 items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 text-slate-400">
-              Chart Placeholder
-            </div>
+            <p className="text-sm font-medium text-slate-500 mb-3">Monthly Payroll Trend</p>
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={monthlyTrend} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="payrollGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis
+                  dataKey="month"
+                  tick={{ fontSize: 12, fill: '#94a3b8' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 12, fill: '#94a3b8' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#93c5fd', strokeWidth: 2 }} />
+                <Area
+                  type="monotone"
+                  dataKey="payroll"
+                  stroke="#3b82f6"
+                  fill="url(#payrollGradient)"
+                  strokeWidth={3}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </section>
 
         <aside className="rounded-2xl bg-white p-6 shadow-soft">
           <h2 className="text-lg font-semibold text-slate-800">Recent Payments</h2>
-          <div className="mt-4 space-y-3">
+          <div className="mt-4 space-y-4">
             {recentPayments.map((payment) => (
-              <div key={payment.employee} className="flex items-center justify-between rounded-xl bg-slate-50 p-4">
-                <div>
-                  <p className="font-semibold text-slate-800">{payment.employee}</p>
-                  <p className="text-sm text-slate-500">{payment.amount}</p>
-                </div>
-                <span
-                  className={`rounded-full px-3 py-1 text-xs font-bold ${
-                    payment.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+              <div key={payment.employee} className="rounded-xl bg-slate-50 p-4">
+                <p className="font-semibold text-slate-800">{payment.employee}</p>
+                <p className="text-sm text-slate-500">{payment.amount}</p>
+                <p
+                  className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                    payment.status === 'Completed'
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-amber-100 text-amber-700'
                   }`}
                 >
                   {payment.status}
-                </span>
+                </p>
               </div>
             ))}
           </div>
