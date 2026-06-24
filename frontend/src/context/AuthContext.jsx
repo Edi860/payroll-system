@@ -19,62 +19,45 @@ export function AuthProvider({ children }) {
         setUser(null);
       }
     }
-
     setLoading(false);
   }, []);
 
-  const saveAuth = useCallback((authUser, authToken) => {
-    setUser(authUser);
+  const login = useCallback((userData, authToken) => {
+    setUser(userData);
     setToken(authToken);
-    localStorage.setItem('auth_user', JSON.stringify(authUser));
+    localStorage.setItem('auth_user', JSON.stringify(userData));
     localStorage.setItem('auth_token', authToken);
   }, []);
 
-  const clearAuth = useCallback(() => {
+  const logout = useCallback(() => {
     setUser(null);
     setToken(null);
     localStorage.removeItem('auth_user');
     localStorage.removeItem('auth_token');
   }, []);
 
-  const login = useCallback(
-    async ({ email, password }) => {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+  const saveAuth = useCallback((userData, authToken) => {
+    login(userData, authToken);
+  }, [login]);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.error || errorData?.message || 'Login failed');
-      }
+  // Role helpers
+  const isAdmin = user?.role === 'admin';
+  const isHR = user?.role === 'hr' || user?.role === 'admin';
+  const isEmployee = user?.role === 'employee';
 
-      const data = await response.json();
-      saveAuth(data.user ?? null, data.token ?? '');
-      return data;
-    },
-    [saveAuth]
-  );
-
-  const logout = useCallback(() => {
-    clearAuth();
-  }, [clearAuth]);
-
-  const value = useMemo(
-    () => ({
-      user,
-      token,
-      loading,
-      isAuthenticated: Boolean(token),
-      login,
-      logout,
-      setUser: saveAuth,
-    }),
-    [user, token, loading, login, logout, saveAuth]
-  );
+  const value = useMemo(() => ({
+    user,
+    token,
+    loading,
+    isAuthenticated: Boolean(token),
+    isAdmin,
+    isHR,
+    isEmployee,
+    role: user?.role || 'employee',
+    login,
+    logout,
+    saveAuth,
+  }), [user, token, loading, isAdmin, isHR, isEmployee, login, logout, saveAuth]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
