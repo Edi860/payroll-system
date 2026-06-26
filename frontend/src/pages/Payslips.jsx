@@ -1,93 +1,137 @@
-import { useCallback, useEffect, useState } from 'react';
-import { get } from '../api/axios';
+import React, { useState, useMemo } from 'react';
+
+const payslipsData = [
+  { id: 1, employeeName: 'Ayesha Khan', employeeId: 'EMP001', department: 'Engineering', period: 'June 2026', basicSalary: 2850, allowances: 500, overtime: 200, deductions: 427, taxWithheld: 285, netSalary: 2838, status: 'Paid' },
+  { id: 2, employeeName: 'Rohan Patel', employeeId: 'EMP002', department: 'Finance', period: 'June 2026', basicSalary: 3120, allowances: 400, overtime: 0, deductions: 468, taxWithheld: 312, netSalary: 2740, status: 'Paid' },
+  { id: 3, employeeName: 'Maria Lopez', employeeId: 'EMP003', department: 'HR', period: 'June 2026', basicSalary: 1980, allowances: 300, overtime: 150, deductions: 297, taxWithheld: 198, netSalary: 1935, status: 'Pending' },
+  { id: 4, employeeName: 'James Smith', employeeId: 'EMP004', department: 'Engineering', period: 'June 2026', basicSalary: 2340, allowances: 350, overtime: 0, deductions: 351, taxWithheld: 234, netSalary: 2105, status: 'Paid' },
+  { id: 5, employeeName: 'Sara Ahmed', employeeId: 'EMP005', department: 'Marketing', period: 'June 2026', basicSalary: 2600, allowances: 450, overtime: 100, deductions: 390, taxWithheld: 260, netSalary: 2500, status: 'Pending' },
+  { id: 6, employeeName: 'David Kim', employeeId: 'EMP006', department: 'Finance', period: 'June 2026', basicSalary: 2900, allowances: 500, overtime: 0, deductions: 435, taxWithheld: 290, netSalary: 2675, status: 'Paid' },
+];
 
 const Payslips = () => {
-  const [payslips, setPayslips] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState('All');
+  const [selectedPayslip, setSelectedPayslip] = useState(null);
 
-  const fetchPayslips = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await get('/payroll');
-      const records = (data.data || []).map((p) => ({
-        id: p._id,
-        employeeId: p.employee?._id || '',
-        employeeName: p.employee
-          ? `${p.employee.firstName || ''} ${p.employee.lastName || ''}`.trim()
-          : 'Unknown',
-        period:
-          p.payPeriod?.startDate && p.payPeriod?.endDate
-            ? `${new Date(p.payPeriod.startDate).toLocaleDateString()} – ${new Date(p.payPeriod.endDate).toLocaleDateString()}`
-            : '—',
-        basicSalary: Number(p.baseSalary || 0),
-        deductions: Number(p.deductions || 0) + Number(p.taxWithheld || 0),
-        netSalary: Number(p.netPay || 0),
-      }));
-      setPayslips(records);
-      setError(null);
-    } catch (err) {
-      setError('Failed to fetch payslips');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const filtered = useMemo(() => {
+    return payslipsData.filter((p) => {
+      const q = search.trim().toLowerCase();
+      const matchSearch =
+        p.employeeName.toLowerCase().includes(q) ||
+        p.employeeId.toLowerCase().includes(q) ||
+        p.department.toLowerCase().includes(q);
+      const matchStatus = filterStatus === 'All' || p.status === filterStatus;
+      return matchSearch && matchStatus;
+    });
+  }, [search, filterStatus]);
 
-  useEffect(() => {
-    fetchPayslips();
-  }, [fetchPayslips]);
-
-  const filteredPayslips = payslips.filter(
-    (slip) =>
-      String(slip.employeeId).includes(searchTerm) ||
-      slip.employeeName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  if (loading) return <p className="text-sm text-slate-500">Loading payslips...</p>;
-  if (error) return <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>;
-
+  const handlePrint = (payslip) => {
+    const printContent = `
+      <html>
+        <head>
+          <title>Payslip - ${payslip.employeeName}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 40px; color: #1e293b; }
+            h1 { color: #2563eb; }
+            .header { display: flex; justify-content: space-between; margin-bottom: 30px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            td, th { padding: 10px; border: 1px solid #e2e8f0; text-align: left; }
+            th { background: #f8fafc; }
+            .total { font-weight: bold; font-size: 18px; color: #2563eb; }
+            .footer { margin-top: 40px; text-align: center; color: #94a3b8; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div><h1>Payroll MS</h1><p>Payslip for ${payslip.period}</p></div>
+            <div><p><strong>Employee ID:</strong> ${payslip.employeeId}</p><p><strong>Department:</strong> ${payslip.department}</p></div>
+          </div>
+          <h2>${payslip.employeeName}</h2>
+          <table>
+            <tr><th>Description</th><th>Amount</th></tr>
+            <tr><td>Basic Salary</td><td>$${payslip.basicSalary.toLocaleString()}</td></tr>
+            <tr><td>Allowances</td><td>$${payslip.allowances.toLocaleString()}</td></tr>
+            <tr><td>Overtime</td><td>$${payslip.overtime.toLocaleString()}</td></tr>
+            <tr><td>Deductions</td><td>-$${payslip.deductions.toLocaleString()}</td></tr>
+            <tr><td>Tax Withheld</td><td>-$${payslip.taxWithheld.toLocaleString()}</td></tr>
+            <tr><td class="total">Net Salary</td><td class="total">$${payslip.netSalary.toLocaleString()}</td></tr>
+          </table>
+          <div class="footer">Generated by Payroll MS · ${new Date().toLocaleDateString()}</div>
+        </body>
+      </html>
+    `;
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(printContent);
+    win.document.close();
+    win.print();
+  };
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-slate-800">Payslips</h1>
+    <div className="p-6">
+      <header className="mb-6">
+        <h1 className="text-2xl font-semibold">Payslips</h1>
+        <p className="text-sm text-gray-600">View and print employee payslips.</p>
+      </header>
 
-      <input
-        type="text"
-        placeholder="Search by Employee ID or Name"
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="w-full max-w-sm rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-      />
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        {[
+          { label: 'Total Payslips', value: payslipsData.length, color: 'bg-blue-500' },
+          { label: 'Paid', value: payslipsData.filter(p => p.status === 'Paid').length, color: 'bg-green-500' },
+          { label: 'Pending', value: payslipsData.filter(p => p.status === 'Pending').length, color: 'bg-amber-500' },
+        ].map((card) => (
+          <div key={card.label} className={`p-4 rounded shadow ${card.color} text-white`}>
+            <div className="text-sm">{card.label}</div>
+            <div className="text-2xl font-bold">{card.value}</div>
+          </div>
+        ))}
+      </div>
 
-      <div className="overflow-x-auto rounded-2xl bg-white shadow-soft">
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="bg-slate-50 text-left text-slate-600">
-              <th className="px-4 py-3 font-semibold">Employee</th>
-              <th className="px-4 py-3 font-semibold">Period</th>
-              <th className="px-4 py-3 text-right font-semibold">Basic Salary</th>
-              <th className="px-4 py-3 text-right font-semibold">Deductions</th>
-              <th className="px-4 py-3 text-right font-semibold">Net Salary</th>
+      <div className="flex gap-4 mb-4">
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, ID or dept" className="border px-3 py-2 rounded w-72" />
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="border px-3 py-2 rounded">
+          <option>All</option>
+          <option>Paid</option>
+          <option>Pending</option>
+        </select>
+      </div>
+
+      <div className="overflow-x-auto bg-white rounded shadow">
+        <table className="min-w-full text-left">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="px-4 py-3">#</th>
+              <th className="px-4 py-3">Employee</th>
+              <th className="px-4 py-3">Emp. ID</th>
+              <th className="px-4 py-3">Department</th>
+              <th className="px-4 py-3">Period</th>
+              <th className="px-4 py-3 text-right">Basic</th>
+              <th className="px-4 py-3 text-right">Net</th>
+              <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filteredPayslips.length > 0 ? (
-              filteredPayslips.map((slip) => (
-                <tr key={slip.id} className="border-b border-slate-100 hover:bg-slate-50">
-                  <td className="px-4 py-3">{slip.employeeName}</td>
-                  <td className="px-4 py-3">{slip.period}</td>
-                  <td className="px-4 py-3 text-right">${slip.basicSalary.toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right">${slip.deductions.toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right font-semibold">${slip.netSalary.toFixed(2)}</td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
-                  No payslips found
+            {filtered.map((p, idx) => (
+              <tr key={p.id} className="border-t">
+                <td className="px-4 py-3">{idx + 1}</td>
+                <td className="px-4 py-3">{p.employeeName}</td>
+                <td className="px-4 py-3">{p.employeeId}</td>
+                <td className="px-4 py-3">{p.department}</td>
+                <td className="px-4 py-3">{p.period}</td>
+                <td className="px-4 py-3 text-right text-slate-700">${p.basicSalary.toLocaleString()}</td>
+                <td className="px-4 py-3 text-right font-bold text-slate-800">${p.netSalary.toLocaleString()}</td>
+                <td className="px-4 py-3">
+                  <span className={`rounded-full px-2 py-1 text-xs font-bold ${p.status === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{p.status}</span>
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex gap-2">
+                    <button onClick={() => setSelectedPayslip(p)} className="rounded-lg bg-blue-50 px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-100 transition">View</button>
+                    <button onClick={() => handlePrint(p)} className="rounded-lg bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 transition">🖨️ Print</button>
+                  </div>
                 </td>
               </tr>
-            )}
+            ))}
           </tbody>
         </table>
       </div>
