@@ -5,10 +5,10 @@ const Settings = () => {
   const [company, setCompany] = useState({
     name: 'Payroll MS Inc.',
     email: 'hr@payrollms.com',
-    phone: '+1 (800) 123-4567',
-    address: '123 Business Ave, New York, NY',
-    currency: 'USD',
-    timezone: 'America/New_York',
+    phone: '+25142643247',
+    address: 'Royal Campany Adiss Abeba Ethiopia',
+    currency: 'ETB',
+    timezone: 'Ethiopia/Adiss Abeba',
     fiscalYear: 'January',
   });
 
