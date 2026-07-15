@@ -10,13 +10,31 @@ const initialEmployees = [
   { id: 6, name: 'David Kim', email: 'david@company.com', department: 'Finance', role: 'Financial Analyst', salary: 2900, status: 'Active', phone: '+1-555-0106', joinDate: '2021-09-05', avatar: 'D' },
 ];
 
+// Generate 12 months of payment history for each employee
+const generatePaymentHistory = (baseSalary) => {
+  const months = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+  const years = [2025, 2025, 2025, 2025, 2025, 2025, 2026, 2026, 2026, 2026, 2026, 2026];
+  return months.map((month, i) => {
+    const variation = Math.round((Math.random() - 0.3) * 150);
+    return {
+      month,
+      year: years[i],
+      amount: baseSalary + variation,
+      status: i === months.length - 1 ? 'Pending' : 'Paid',
+      date: `${month} 25, ${years[i]}`,
+    };
+  });
+};
+
 const departments = ['All', 'Engineering', 'Finance', 'HR', 'Marketing'];
 const avatarColors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-amber-500', 'bg-rose-500', 'bg-indigo-500'];
 const EMPTY = { name: '', email: '', phone: '', department: 'Engineering', role: '', salary: '', status: 'Active', joinDate: '' };
 
 const Employees = () => {
   const { isHR, isAdmin } = useAuth();
-  const [employees, setEmployees] = useState(initialEmployees);
+  const [employees, setEmployees] = useState(
+    initialEmployees.map((e) => ({ ...e, paymentHistory: generatePaymentHistory(e.salary) }))
+  );
   const [search, setSearch] = useState('');
   const [filterDept, setFilterDept] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
@@ -52,13 +70,14 @@ const Employees = () => {
     return matchSearch && matchDept && matchStatus;
   }), [employees, search, filterDept, filterStatus]);
 
-  const handleAdd = () => {
-    if (!formData.name || !formData.email) return;
+  const handleAdd = () => {if (!formData.name || !formData.email) return;
+    const salary = parseFloat(formData.salary) || 0;
     setEmployees([...employees, {
       ...formData,
       id: Date.now(),
-      salary: parseFloat(formData.salary) || 0,
+      salary,
       avatar: formData.name.charAt(0),
+      paymentHistory: generatePaymentHistory(salary),
     }]);
     showToast('✅ Employee added successfully!');
     closeModal();
@@ -78,6 +97,7 @@ const Employees = () => {
     showToast('🗑️ Employee deleted.');
     closeModal();
   };
+
   const handleSalaryUpdate = () => {
     if (!salaryAmount) return;
     setEmployees(employees.map((e) =>
@@ -89,7 +109,7 @@ const Employees = () => {
 
   const handleAdvance = () => {
     if (!advanceAmount) return;
-    showToast(`💵 Advance of $${parseFloat(advanceAmount).toLocaleString()} approved for ${selected?.name}`);
+    showToast(`💵 Advance of $${parseFloat(advanceAmount).toLocaleString()} approved for ${selected.name}`);
     closeModal();
   };
 
@@ -103,6 +123,10 @@ const Employees = () => {
   const inputClass = 'w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400 mt-1';
   const activeCount = employees.filter(e => e.status === 'Active').length;
   const totalSalary = employees.reduce((sum, e) => sum + e.salary, 0);
+
+  // Helpers for payment history modal
+  const getLastMonthPayment = (emp) => emp.paymentHistory[emp.paymentHistory.length - 2];
+  const getLastYearTotal = (emp) => emp.paymentHistory.reduce((sum, p) => sum + p.amount, 0);
 
   return (
     <div className="space-y-6">
@@ -136,7 +160,7 @@ const Employees = () => {
           { label: 'Total Employees', value: employees.length, color: 'bg-blue-500' },
           { label: 'Active', value: activeCount, color: 'bg-green-500' },
           { label: 'Inactive', value: employees.length - activeCount, color: 'bg-red-500' },
-          { label: 'Total Salary', value: `$${totalSalary.toLocaleString()}`, color: 'bg-purple-500' },
+          { label: 'Total Salary', value: totalSalary.toLocaleString(), color: 'bg-purple-500' },
         ].map((card) => (
           <div key={card.label} className="overflow-hidden rounded-2xl bg-white shadow-sm">
             <div className={`h-1.5 ${card.color}`} />
@@ -146,9 +170,7 @@ const Employees = () => {
             </div>
           </div>
         ))}
-      </div>
-
-      {/* Search & Filter */}
+      </div>{/* Search & Filter */}
       <div className="flex flex-wrap gap-3">
         <input
           type="text"
@@ -164,9 +186,11 @@ const Employees = () => {
           {['All', 'Active', 'Inactive'].map((s) => <option key={s}>{s}</option>)}
         </select>
         <span className="flex items-center text-sm text-slate-500">{filtered.length} employees</span>
-      </div>{/* Role Info Banner */}
+      </div>
+
+      {/* Role Info Banner */}
       <div className={`rounded-xl px-4 py-2 text-sm font-medium ${isAdmin ? 'bg-blue-50 text-blue-700' : isHR ? 'bg-green-50 text-green-700' : 'bg-slate-50 text-slate-600'}`}>
-        {isAdmin ? '🔐 Admin — You have full access (View, Edit, Salary, Advance, Deactivate, Delete)' : isHR ? '👤 HR — You can View, Edit, Update Salary, Advance and Deactivate' : '👁️ Employee — You can only view employee information'}
+        {isAdmin ? '🔐 Admin — Full access to all employee actions' : isHR ? '👤 HR — You can View, Edit, Salary, Advance, Deactivate, and Payment History' : '👁️ Employee — You can only view employee information'}
       </div>
 
       {/* Employee Cards */}
@@ -203,15 +227,27 @@ const Employees = () => {
                   <div>💰 ${emp.salary.toLocaleString()}/mo</div>
                 </div>
 
-                {/* Action Buttons - Role Based */}
-                <div className="mt-4 grid grid-cols-3 gap-2">
+                {/* Last Payment Quick View */}
+                <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2 flex items-center justify-between">
+                  <span className="text-xs text-slate-500">Last payment ({getLastMonthPayment(emp).month})</span>
+                  <span className="text-xs font-bold text-slate-700">${getLastMonthPayment(emp).amount.toLocaleString()}</span>
+                </div>
 
-                  {/* Everyone can View */}
+                {/* Action Buttons - Role Based */}
+                <div className="mt-3 grid grid-cols-3 gap-2">{/* Everyone can View */}
                   <button
                     onClick={() => { setSelected(emp); setModal('view'); }}
                     className="rounded-lg bg-slate-50 px-2 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition"
                   >
                     👁️ View
+                  </button>
+
+                  {/* Everyone can see Payment History */}
+                  <button
+                    onClick={() => { setSelected(emp); setModal('history'); }}
+                    className="rounded-lg bg-indigo-50 px-2 py-2 text-xs font-semibold text-indigo-600 hover:bg-indigo-100 transition"
+                  >
+                    📜 History
                   </button>
 
                   {/* HR + Admin can Edit */}
@@ -232,7 +268,9 @@ const Employees = () => {
                     >
                       💰 Salary
                     </button>
-                  )}{/* HR + Admin can give Advance */}
+                  )}
+
+                  {/* HR + Admin can give Advance */}
                   {isHR && (
                     <button
                       onClick={() => { setSelected(emp); setModal('advance'); }}
@@ -276,8 +314,7 @@ const Employees = () => {
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 text-white font-bold text-2xl">{selected.avatar}</div>
-                  <div>
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 text-white font-bold text-2xl">{selected.avatar}</div><div>
                     <h2 className="text-xl font-bold text-white">{selected.name}</h2>
                     <p className="text-blue-100 text-sm">{selected.role} · {selected.department}</p>
                   </div>
@@ -308,8 +345,67 @@ const Employees = () => {
         </div>
       )}
 
+      {/* Payment History Modal — Last Year & Last Month */}
+      {modal === 'history' && selected && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-white font-bold text-xl">{selected.avatar}</div>
+                  <div>
+                    <h2 className="text-lg font-bold text-white">Payment History</h2>
+                    <p className="text-indigo-100 text-sm">{selected.name} · {selected.role}</p>
+                  </div>
+                </div>
+                <button onClick={closeModal} className="text-white/70 hover:text-white text-xl">✕</button>
+              </div>
+            </div>
+
+            {/* Summary */}
+            <div className="grid grid-cols-2 gap-3 p-4 border-b border-slate-100">
+              <div className="rounded-xl bg-blue-50 px-4 py-3">
+                <p className="text-xs text-blue-500 font-medium">Last Month Payment</p>
+                <p className="text-lg font-bold text-blue-700">${getLastMonthPayment(selected).amount.toLocaleString()}</p>
+                <p className="text-xs text-blue-400">{getLastMonthPayment(selected).date}</p>
+              </div>
+              <div className="rounded-xl bg-purple-50 px-4 py-3">
+                <p className="text-xs text-purple-500 font-medium">Last 12 Months Total</p>
+                <p className="text-lg font-bold text-purple-700">${getLastYearTotal(selected).toLocaleString()}</p>
+                <p className="text-xs text-purple-400">Jul {selected.paymentHistory[0].year} – Jun {selected.paymentHistory[11].year}</p>
+              </div>
+            </div>
+
+            {/* Monthly Breakdown */}
+            <div className="overflow-y-auto flex-1 p-4">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Monthly Breakdown</p><div className="space-y-2">
+                {selected.paymentHistory.slice().reverse().map((p, idx) => (
+                  <div key={idx} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-2.5">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-700">{p.month} {p.year}</p>
+                      <p className="text-xs text-slate-400">{p.date}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-slate-800">${p.amount.toLocaleString()}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${p.status === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {p.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-slate-100">
+              <button onClick={closeModal} className="w-full rounded-xl bg-slate-100 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200 transition">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add / Edit Modal */}
-      {(modal === 'add' || modal === 'edit') && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4">
+      {(modal === 'add' || modal === 'edit') && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white shadow-xl p-6 max-h-screen overflow-y-auto">
             <h2 className="text-lg font-bold text-slate-800 mb-4">
               {modal === 'add' ? '➕ Add New Employee' : '✏️ Edit Employee'}
@@ -343,8 +439,7 @@ const Employees = () => {
             </div>
             <div className="flex gap-3 mt-5">
               <button onClick={modal === 'add' ? handleAdd : handleEdit} className="flex-1 rounded-xl bg-blue-600 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition">
-                {modal === 'add' ? 'Add Employee' : 'Save Changes'}
-              </button>
+                {modal === 'add' ? 'Add Employee' : 'Save Changes'}</button>
               <button onClick={closeModal} className="flex-1 rounded-xl bg-slate-100 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200 transition">Cancel</button>
             </div>
           </div>
@@ -365,7 +460,9 @@ const Employees = () => {
             </div>
           </div>
         </div>
-      )}{/* Advance Payment Modal */}
+      )}
+
+      {/* Advance Payment Modal */}
       {modal === 'advance' && selected && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4">
           <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl p-6">
@@ -402,9 +499,7 @@ const Employees = () => {
             </div>
           </div>
         </div>
-      )}
-
-    </div>
+      )}</div>
   );
 };
 
