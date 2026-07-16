@@ -7,7 +7,7 @@ const initialEmployees = [
   { id: 3, name: 'Maria Lopez', email: 'maria@company.com', department: 'HR', role: 'HR Manager', salary: 1980, status: 'Active', phone: '+1-555-0103', joinDate: '2023-01-10', avatar: 'M' },
   { id: 4, name: 'James Smith', email: 'james@company.com', department: 'Engineering', role: 'Junior Developer', salary: 2340, status: 'Active', phone: '+1-555-0104', joinDate: '2023-06-01', avatar: 'J' },
   { id: 5, name: 'Sara Ahmed', email: 'sara@company.com', department: 'Marketing', role: 'Marketing Lead', salary: 2600, status: 'Inactive', phone: '+1-555-0105', joinDate: '2022-11-15', avatar: 'S' },
-  { id: 6, name: 'David Kim', email: 'david@company.com', department: 'Finance', role: 'Financial Analyst', salary: 2900, status: 'Active', phone: '+1-555-0106', joinDate: '2021-09-05', avatar: 'D' },
+  { id: 6, name: 'David Kim', email: 'deva@company.com', department: 'Finance', role: 'Financial Analyst', salary: 2900, status: 'Active', phone: '+1-555-0106', joinDate: '2021-09-05', avatar: 'D' },
 ];
 
 // Generate 12 months of payment history for each employee
